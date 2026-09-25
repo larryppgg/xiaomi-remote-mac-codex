@@ -1,0 +1,66 @@
+{
+  "format": 1,
+  "testedWith": "SayAll 1.9.21 / Xiaomi Bluetooth Remote 2 Pro (RC003)",
+  "buttonBindings": {
+    "power": "customShortcut",
+    "up": "arrowUp",
+    "down": "arrowDown",
+    "left": "arrowLeft",
+    "right": "arrowRight",
+    "ok": "returnKey",
+    "back": "deleteBackward",
+    "home": "showDesktop",
+    "menu": "customShortcut",
+    "volume_up": "scrollUp",
+    "volume_down": "scrollDown",
+    "tv": "appSwitcher"
+  },
+  "buttonShortcuts": {
+    "power": {"modifierFlagsRawValue": 1048576, "keyCode": 33, "keyLabel": "["},
+    "menu": {"modifierFlagsRawValue": 1048576, "keyCode": 40, "keyLabel": "K"}
+  },
+  "secondaryButtonBindings": {
+    "power": {
+      "doubleClick": {"action": "playPause"},
+      "longPress": {"action": "commandClose"}
+    },
+    "up": {"longPress": {"action": "commandUndo"}},
+    "down": {"longPress": {"action": "commandRedo"}},
+    "left": {
+      "doubleClick": {"action": "disabled"},
+      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 1048576, "keyCode": 123, "keyLabel": "←"}}
+    },
+    "right": {
+      "doubleClick": {"action": "disabled"},
+      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 1048576, "keyCode": 124, "keyLabel": "→"}}
+    },
+    "ok": {
+      "doubleClick": {"action": "commandSelectAll"},
+      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 1179648, "keyCode": 36, "keyLabel": "↩"}}
+    },
+    "back": {
+      "doubleClick": {"action": "disabled"},
+      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 524288, "keyCode": 51, "keyLabel": "⌫"}}
+    },
+    "home": {
+      "doubleClick": {"action": "openCustomApplication", "application": "com.google.Chrome"},
+      "longPress": {"action": "openCodex"}
+    },
+    "menu": {
+      "doubleClick": {"action": "commandCopy"},
+      "longPress": {"action": "commandPaste"}
+    },
+    "volume_up": {
+      "doubleClick": {"action": "disabled"},
+      "longPress": {"action": "disabled"}
+    },
+    "volume_down": {
+      "doubleClick": {"action": "disabled"},
+      "longPress": {"action": "disabled"}
+    },
+    "tv": {
+      "doubleClick": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 393216, "keyCode": 46, "keyLabel": "M"}},
+      "longPress": {"action": "openCodex"}
+    }
+  }
+}

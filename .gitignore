@@ -1,0 +1,14 @@
+.DS_Store
+**/.build/
+**/.swiftpm/
+**/__pycache__/
+*.pyc
+*.log
+*.plist.local
+*.backup
+*.bak
+runtime.log
+restore.log
+state.plist
+remoteDeviceProfiles*.json
+sayall-before-*.plist
