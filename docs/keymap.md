@@ -27,7 +27,7 @@
 | TV | `⌘Tab`：切换应用 | `⌃⇧M`：Codex 模型选择器 | 打开 Codex |
 | 语音 | 按住说话，松开结束 | 不参与普通映射 | 不参与普通映射 |
 
-`⌘K`、`⌃⇧M` 和 `⌘Return` 是送给当前前台 App 的快捷键；在其他 App 中可能是别的功能或无动作。当前 Codex 桌面版在默认 `composerEnterBehavior = "enter"` 且 `followUpQueueMode = "queue"` 时，只在**正在回复**的本地任务中把 `⌘Return` 作为与排队相反的“引导”；空闲时它正常发送。若回车行为改为 `cmdAlways` 或 `cmdIfMultiline`，对应的相反操作改为 `⌘⇧Return`。**实体遥控器触发“引导”尚未完成验收**。普通确定键保留 `Return`，因此仍由 Codex 默认设置决定排队或发送。
+`⌘K`、`⌃⇧M` 和 `⌘Return` 是送给当前前台 App 的快捷键；在其他 App 中可能是别的功能或无动作。当前 Codex 桌面版在默认 `composerEnterBehavior = "enter"` 且 `followUpQueueMode = "queue"` 时，只在**正在回复**的本地任务中把 `⌘Return` 作为与排队相反的“引导”；空闲时它正常发送。若回车行为改为 `cmdAlways` 或 `cmdIfMultiline`，对应的相反操作改为 `⌘⇧Return`。**本机实体遥控器已在回复过程中通过引导测试**，其他版本仍应按同样场景验收。普通确定键保留 `Return`，因此仍由 Codex 默认设置决定排队或发送。
 
 SayAll 对双击、长按有识别时间；设置长按的键不会在按住时无限重复。逐字定位请连续单击左右键；到行首或行尾则长按。返回键双击禁用，因此可以连按删除多个字。
 
