@@ -36,7 +36,7 @@
     },
     "ok": {
       "doubleClick": {"action": "commandSelectAll"},
-      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 1179648, "keyCode": 36, "keyLabel": "↩"}}
+      "longPress": {"action": "commandReturn"}
     },
     "back": {
       "doubleClick": {"action": "disabled"},

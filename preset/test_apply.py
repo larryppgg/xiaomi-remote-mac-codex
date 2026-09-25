@@ -34,6 +34,7 @@ class MappingTests(unittest.TestCase):
         self.assertEqual(profiles[0], module.decoded_json(original, "remoteDeviceProfiles", [])[0])
         self.assertEqual(profiles[1]["bluetoothIdentifier"], "private-local-id")
         self.assertEqual(profiles[1]["mappings"]["buttonBindings"]["back"], "deleteBackward")
+        self.assertEqual(profiles[1]["mappings"]["secondaryButtonBindings"]["ok"]["longPress"], {"action": "commandReturn"})
         self.assertEqual(profiles[1]["mappings"]["secondaryButtonBindings"]["home"]["doubleClick"]["applicationProfileID"], "chrome-profile")
         self.assertEqual(result["unrelatedSetting"], "preserve-me")
         self.assertNotIn("buttonBindings", result)  # other device keeps global fallback
