@@ -30,8 +30,12 @@ public final class TISInputSourceController: InputSourceControlling {
         // the selected system input mode used by the foreground app.
         if let prefs = UserDefaults(suiteName: "com.apple.HIToolbox") {
             prefs.synchronize()
+            // The first entry may be a non-keyboard input method (for example
+            // Ironwood). The active keyboard input mode is the first entry that
+            // actually has an Input Mode; falling back to this helper's TIS
+            // context can incorrectly report its stale WeChat selection.
             if let selected = prefs.array(forKey: "AppleSelectedInputSources") as? [[String: Any]],
-               let mode = selected.first?["Input Mode"] as? String {
+               let mode = Self.keyboardMode(in: selected) {
                 return mode
             }
         }
@@ -39,6 +43,10 @@ public final class TISInputSourceController: InputSourceControlling {
             return nil
         }
         return inputSourceID(src)
+    }
+
+    static func keyboardMode(in selected: [[String: Any]]) -> String? {
+        selected.compactMap { $0["Input Mode"] as? String }.first
     }
 
     public func selectSource(id: String) -> Bool {

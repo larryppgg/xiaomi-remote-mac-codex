@@ -20,6 +20,8 @@
 
 6. 用一段约 15–20 秒的实际语音验证：松开后等识别文字上的临时下划线消失，确认文字仍留在 Codex 输入框；再打一个字，确认键盘输入源为微信。若文字消失，先检查 `~/Library/Logs/RemoteVoiceRestore/restore.log` 的恢复时间，必要时用 `--restore-delay-ms` 增大等待时间并重新加载辅助程序。
 
+若语音结束后仍是豆包，而日志却写着 `active=...wetype.pinyin not doubao`，请更新并重新安装本仓库的辅助程序。旧版在 macOS 输入源列表首项是非键盘项目时，可能误读后台进程自己的微信输入源，跳过实际需要的恢复。
+
 ## 可调延迟
 
 `voice-restore/Sources/remote-voice-restore/main.swift` 的默认值为 3000 毫秒。也可以给 LaunchAgent 的 `ProgramArguments` 添加 `--restore-delay-ms` 和所需毫秒数，然后重新加载。更长的等待有利于长句上屏，但键盘切回微信也更晚；请用真实长句选择适合本机的值。
