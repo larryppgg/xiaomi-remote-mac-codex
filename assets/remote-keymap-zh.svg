@@ -14,9 +14,9 @@
 <text x="815" y="295" class="body">—</text>
 <text x="1180" y="295" class="body">—</text>
 <text x="90" y="370" class="body">左 / 右</text>
-<text x="305" y="370" class="body">逐字移动光标 / 选择项</text>
+<text x="305" y="370" class="body">标准方向键 ← / →</text>
 <text x="815" y="370" class="body">连续单击保持方向</text>
-<text x="1180" y="370" class="body">行首 / 行尾</text>
+<text x="1180" y="370" class="body">按住方向连续移动</text>
 <rect x="65" y="400" width="1470" height="72" rx="8" fill="#192638"/>
 <text x="90" y="445" class="body">上 / 下</text>
 <text x="305" y="445" class="body">上下移动光标 / 选择项</text>

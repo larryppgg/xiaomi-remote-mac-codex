@@ -28,11 +28,11 @@
     "down": {"longPress": {"action": "commandRedo"}},
     "left": {
       "doubleClick": {"action": "disabled"},
-      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 1048576, "keyCode": 123, "keyLabel": "←"}}
+      "longPress": {"action": "disabled"}
     },
     "right": {
       "doubleClick": {"action": "disabled"},
-      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 1048576, "keyCode": 124, "keyLabel": "→"}}
+      "longPress": {"action": "disabled"}
     },
     "ok": {
       "doubleClick": {"action": "commandSelectAll"},
