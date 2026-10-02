@@ -1,29 +1,28 @@
-# 微信键盘输入＋豆包遥控器语音
+# 微信打字＋Typeless 遥控器语音
 
-目标：日常键盘使用微信输入法；按住遥控器语音键时由豆包识别；松开并上屏后再切回微信。语音键本身由 SayAll 处理，不写进普通按键预设。
+键盘使用微信输入法，遥控器语音由 Typeless 识别。Typeless 把结果插入当前输入框，无需切换键盘输入源。
 
-## 设置顺序
+## 设置
 
-1. 安装[SayAll](https://github.com/HD838A/remote-mic-app/releases)、豆包输入法和微信输入法。先按 SayAll 的首次使用向导配对遥控器，确认连接页显示已连接。
-2. 使用 SayAll 安装包自带的兼容麦克风，或按上游说明选一个兼容的虚拟音频设备。在 SayAll“连接”页将语音输出选到该设备；在豆包的语音设置中选同一个麦克风。
-3. 在 SayAll“按键”页把语音触发键选为 `Fn/地球键`。让豆包的全局语音快捷键响应 Fn；关闭微信输入法对同一 Fn 语音快捷键的占用。普通键盘输入源先切为微信。
-4. 先测试一次短句：Codex 输入框中按住遥控器语音键说话，松开后确认文字真正留在输入框。若豆包没有识别，先检查麦克风输入与 Fn 快捷键，不要安装恢复程序掩盖前段故障。
-5. 若松开后键盘留在豆包，在仓库根目录执行：
+1. 从 [Typeless 官方网站](https://www.typeless.com/)安装应用，完成其权限与快捷键向导。权限需要本人授权，密码由本人输入。
+2. 在 Typeless 设置中，把**实际语音输入快捷键**设为 `Fn`；向导写“推荐 Fn”不代表实际已保存 Fn。当前 2.8.1 是按一下开始，再按一下结束。
+3. 在 SayAll 1.9.21 首次向导中选择 Typeless，启用 **Fn 点按兼容模式**，完成真实按键及语音测试。遥控器按住开始收音，松开结束；SayAll 将这两个边沿转换成 Typeless 所需的 Fn 点按。
+4. SayAll 语音输出与 Typeless 麦克风都选择 **MiRemoteV 2ch**。只配置系统默认输入可能选错设备。
+5. 关闭微信、豆包对 Fn 语音的占用。若装过本仓库旧恢复辅助程序，执行 `voice-restore/uninstall.sh` 停用；不要安装它用于 Typeless。普通输入源切到微信。
+6. 在 Codex 输入框按住遥控器语音键，说一句后松开；确认 Typeless 浮窗结束、文字留下。再验证一段超过一分钟的实际语音，最后用键盘打字确认仍是微信。
 
-   ```bash
-   cd voice-restore
-   ./install.sh
-   ./status.sh
-   ```
+## 运行限制
 
-   这个用户级辅助程序读取 SayAll 的遥控器语音开始／停止事件，默认在停止 **3 秒后**、且当前输入源仍是豆包时恢复到语音前的输入源（通常是微信）。它不读取语音内容。`./uninstall.sh` 可移除程序和 LaunchAgent；不带 `--purge` 时保留本机状态与日志。
+Typeless 官方当前说明每次听写最长 **9 分钟**，到上限会结束并保存到 History；并非无限录音。免费版还有字数额度，以应用显示为准。本方案不自动购买或订阅。
 
-6. 用一段约 15–20 秒的实际语音验证：松开后等识别文字上的临时下划线消失，确认文字仍留在 Codex 输入框；再打一个字，确认键盘输入源为微信。若文字消失，先检查 `~/Library/Logs/RemoteVoiceRestore/restore.log` 的恢复时间，必要时用 `--restore-delay-ms` 增大等待时间并重新加载辅助程序。
+[官方听写说明](https://www.typeless.com/help/quickstart/dictate) · [单次时长说明](https://www.typeless.com/help/troubleshooting/dictation-limit)
 
-若语音结束后仍是豆包，而日志却写着 `active=...wetype.pinyin not doubao`，请更新并重新安装本仓库的辅助程序。旧版在 macOS 输入源列表首项是非键盘项目时，可能误读后台进程自己的微信输入源，跳过实际需要的恢复。
+## 排障与 Agent 注意事项
 
-## 可调延迟
+- 无浮窗：先核对实际 Fn 快捷键、SayAll 点按兼容、权限及连接。
+- 有浮窗但无声音：核对两端 MiRemoteV 2ch，并测试遥控器声音。
+- 向导报输入目标未就绪：把 SayAll 测试窗口置于前台并点输入框，别在 Codex 输入框测试该步骤。
+- 长句没上屏：检查 Typeless History、网络和额度；不要切换输入源来结束临时识别。
+- 不发布应用偏好、麦克风设备 ID、日志、识别文字、账户信息或 Codex 会话。
 
-`voice-restore/Sources/remote-voice-restore/main.swift` 的默认值为 3000 毫秒。也可以给 LaunchAgent 的 `ProgramArguments` 添加 `--restore-delay-ms` 和所需毫秒数，然后重新加载。更长的等待有利于长句上屏，但键盘切回微信也更晚；请用真实长句选择适合本机的值。
-
-不要发布 `~/Library/Logs/RemoteMic/runtime.log`、`~/Library/Logs/RemoteVoiceRestore/restore.log` 或任何本机输入法状态文件。报告问题时只说明语音是否留下、恢复时间和输入源结果即可。
+旧豆包方案见[历史说明](voice-input-legacy-doubao.md)，仅适用于主动选择该方案的人。
