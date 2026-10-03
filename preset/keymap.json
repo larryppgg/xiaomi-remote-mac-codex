@@ -2,30 +2,30 @@
   "format": 1,
   "testedWith": "SayAll 1.9.21 / Xiaomi Bluetooth Remote 2 Pro (RC003)",
   "buttonBindings": {
-    "power": "customShortcut",
+    "power": "escape",
     "up": "arrowUp",
     "down": "arrowDown",
     "left": "arrowLeft",
     "right": "arrowRight",
     "ok": "returnKey",
     "back": "deleteBackward",
-    "home": "showDesktop",
+    "home": "customShortcut",
     "menu": "customShortcut",
     "volume_up": "scrollUp",
     "volume_down": "scrollDown",
     "tv": "appSwitcher"
   },
   "buttonShortcuts": {
-    "power": {"modifierFlagsRawValue": 1048576, "keyCode": 33, "keyLabel": "["},
-    "menu": {"modifierFlagsRawValue": 1048576, "keyCode": 40, "keyLabel": "K"}
+    "home": {"modifierFlagsRawValue": 1048576, "keyCode": 40, "keyLabel": "K"},
+    "menu": {"modifierFlagsRawValue": 0, "keyCode": 48, "keyLabel": "Tab"}
   },
   "secondaryButtonBindings": {
     "power": {
       "doubleClick": {"action": "playPause"},
       "longPress": {"action": "commandClose"}
     },
-    "up": {"longPress": {"action": "commandUndo"}},
-    "down": {"longPress": {"action": "commandRedo"}},
+    "up": {"longPress": {"action": "disabled"}},
+    "down": {"longPress": {"action": "disabled"}},
     "left": {
       "doubleClick": {"action": "disabled"},
       "longPress": {"action": "disabled"}
@@ -51,16 +51,16 @@
       "longPress": {"action": "commandPaste"}
     },
     "volume_up": {
-      "doubleClick": {"action": "disabled"},
-      "longPress": {"action": "disabled"}
+      "doubleClick": {"action": "commandUndo"},
+      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 393216, "keyCode": 48, "keyLabel": "Tab"}}
     },
     "volume_down": {
-      "doubleClick": {"action": "disabled"},
-      "longPress": {"action": "disabled"}
+      "doubleClick": {"action": "commandRedo"},
+      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 262144, "keyCode": 48, "keyLabel": "Tab"}}
     },
     "tv": {
       "doubleClick": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 393216, "keyCode": 46, "keyLabel": "M"}},
-      "longPress": {"action": "openCodex"}
+      "longPress": {"action": "customShortcut", "shortcut": {"modifierFlagsRawValue": 131072, "keyCode": 48, "keyLabel": "Tab"}}
     }
   }
 }

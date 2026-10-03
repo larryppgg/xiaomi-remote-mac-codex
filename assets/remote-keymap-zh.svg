@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600">
 <rect width="1600" height="1600" fill="#101827"/>
-<style>text{font-family:"PingFang SC","Microsoft YaHei",sans-serif;fill:#eef3fb} .small{font-size:23px;fill:#acbfd6}.body{font-size:25px}.head{font-size:25px;font-weight:600;fill:#77dcce}</style>
+<style>text{font-family:"PingFang SC","Microsoft YaHei",sans-serif;fill:#eef3fb}.small{font-size:23px;fill:#acbfd6}.body{font-size:25px}.head{font-size:25px;font-weight:600;fill:#77dcce}</style>
 <text x="70" y="90" font-size="43" font-weight="700">小米遥控器 2 Pro · Mac / Codex 按键速查</text>
-<text x="70" y="138" class="small">微信键盘输入 + Typeless 语音｜SayAll 1.9.21｜RC003</text>
+<text x="70" y="138" class="small">微信打字 + Typeless 语音｜SayAll 1.9.21｜RC003｜v2 · 2026-10-03</text>
 <rect x="65" y="175" width="1470" height="68" rx="12" fill="#23324a"/>
 <text x="90" y="218" class="head">按键</text>
 <text x="305" y="218" class="head">单击 / 基础操作</text>
@@ -19,11 +19,11 @@
 <text x="1180" y="370" class="body">按住方向连续移动</text>
 <rect x="65" y="400" width="1470" height="72" rx="8" fill="#192638"/>
 <text x="90" y="445" class="body">上 / 下</text>
-<text x="305" y="445" class="body">上下移动光标 / 选择项</text>
-<text x="815" y="445" class="body">—</text>
-<text x="1180" y="445" class="body">撤销 / 重做</text>
+<text x="305" y="445" class="body">标准方向键 ↑ / ↓</text>
+<text x="815" y="445" class="body">连续单击保持方向</text>
+<text x="1180" y="445" class="body">按住方向连续移动</text>
 <text x="90" y="520" class="body">确定</text>
-<text x="305" y="520" class="body">回车；遵循 Codex 默认发送行为</text>
+<text x="305" y="520" class="body">回车；遵循默认发送行为</text>
 <text x="815" y="520" class="body">全选</text>
 <text x="1180" y="520" class="body">⌘Return；回复中引导*</text>
 <rect x="65" y="550" width="1470" height="72" rx="8" fill="#192638"/>
@@ -32,28 +32,39 @@
 <text x="815" y="595" class="body">连续单击保持删除</text>
 <text x="1180" y="595" class="body">删除前一个词</text>
 <text x="90" y="670" class="body">主页</text>
-<text x="305" y="670" class="body">显示桌面</text>
+<text x="305" y="670" class="body">⌘K：命令 / 会话查找*</text>
 <text x="815" y="670" class="body">打开 Chrome</text>
 <text x="1180" y="670" class="body">打开 Codex</text>
 <rect x="65" y="700" width="1470" height="72" rx="8" fill="#192638"/>
 <text x="90" y="745" class="body">菜单</text>
-<text x="305" y="745" class="body">⌘K：由当前应用解释</text>
+<text x="305" y="745" class="body">Tab：下一个控件</text>
 <text x="815" y="745" class="body">复制</text>
 <text x="1180" y="745" class="body">粘贴</text>
 <text x="90" y="820" class="body">电源</text>
-<text x="305" y="820" class="body">⌘[：返回上一级</text>
+<text x="305" y="820" class="body">Esc：取消 / 关闭弹窗</text>
 <text x="815" y="820" class="body">播放 / 暂停</text>
 <text x="1180" y="820" class="body">关闭窗口 / 标签</text>
 <rect x="65" y="850" width="1470" height="72" rx="8" fill="#192638"/>
 <text x="90" y="895" class="body">TV</text>
 <text x="305" y="895" class="body">切换应用</text>
 <text x="815" y="895" class="body">Codex 模型选择器*</text>
-<text x="1180" y="895" class="body">打开 Codex</text>
-<text x="90" y="970" class="body">音量 + / −</text>
-<text x="305" y="970" class="body">页面向上 / 向下滚动</text>
-<text x="815" y="970" class="body">不另设动作</text>
-<text x="1180" y="970" class="body">不另设动作</text>
-<text x="75" y="1055" class="small">* Codex 需在前台，输入框有焦点；长按确定在任务回复中用于引导，空闲时正常发送。</text>
-<text x="75" y="1095" class="small">语音：Typeless 实际快捷键 Fn；SayAll 开启 Fn 点按兼容；两端麦克风都选 MiRemoteV 2ch。</text>
-<text x="75" y="1135" class="small">连续方向与删除不切换动作。语音文字出现后再发送。Typeless 单次听写最长 9 分钟。</text>
+<text x="1180" y="895" class="body">⇧Tab：上一个控件</text>
+<text x="90" y="970" class="body">音量 +</text>
+<text x="305" y="970" class="body">页面向上滚动</text>
+<text x="815" y="970" class="body">撤销</text>
+<text x="1180" y="970" class="body">上一个最近会话 / 标签*</text>
+<rect x="65" y="1000" width="1470" height="72" rx="8" fill="#192638"/>
+<text x="90" y="1045" class="body">音量 −</text>
+<text x="305" y="1045" class="body">页面向下滚动</text>
+<text x="815" y="1045" class="body">重做</text>
+<text x="1180" y="1045" class="body">下一个最近会话 / 标签*</text>
+<text x="75" y="1120" class="small">* 长按确定：Codex 正在回复且输入框聚焦时引导；空闲时正常发送。</text>
+<text x="75" y="1159" class="small">* 音量长按：Codex 最近会话 / Chrome 标签；不按侧边栏项目顺序遍历。</text>
+<text x="75" y="1198" class="small">* 主页查找与 TV 模型：依赖目标应用。Tab 只移动应用支持的可聚焦控件。</text>
+<text x="75" y="1237" class="small">语音：实际快捷键 Fn；SayAll 开启 Fn 点按兼容；两端麦克风都选 MiRemoteV 2ch。</text>
+<rect x="65" y="1300" width="1470" height="230" rx="18" fill="#23324a"/>
+<text x="90" y="1345" class="head">常用操作顺序</text>
+<text x="90" y="1390" class="body">找会话：长按主页进入 Codex → 单击主页查找 → 输入名称 → 上下选择 → 确定。</text>
+<text x="90" y="1435" class="body">修正文字：方向移动 → 返回删除；双击确定全选；音量＋双击撤销、－双击重做。</text>
+<text x="90" y="1480" class="body">切控件：菜单短按往后、TV 长按往前；退出菜单用电源短按。</text>
 </svg>
