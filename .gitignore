@@ -12,3 +12,5 @@ restore.log
 state.plist
 remoteDeviceProfiles*.json
 sayall-before-*.plist
+
+voice-switcher/dist/

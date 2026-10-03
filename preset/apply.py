@@ -105,8 +105,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--apply", action="store_true", help="write settings (default: check only)")
     parser.add_argument("--profile-index", type=int, help="choose among multiple paired RC003 profiles")
+    parser.add_argument("--preset", choices=["keymap.json", "keymap-dual-voice.json"],
+                        default="keymap.json", help="choose the standard or optional dual-voice keymap")
     args = parser.parse_args()
-    preset = json.loads(PRESET.read_text(encoding="utf-8"))
+    preset = json.loads(PRESET.with_name(args.preset).read_text(encoding="utf-8"))
     if preset.get("format") != 1:
         parser.error("unsupported keymap format")
     try:

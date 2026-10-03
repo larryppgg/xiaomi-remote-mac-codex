@@ -2,6 +2,8 @@
 """Render the public remote reference as an SVG without private device data."""
 from html import escape
 from pathlib import Path
+import sys
+dual = "--dual" in sys.argv
 
 rows = [
     ('语音', '按住说话，松开结束（Typeless）', '—', '—'),
@@ -16,6 +18,10 @@ rows = [
     ('音量 +', '页面向上滚动', '撤销', '上一个最近会话 / 标签*'),
     ('音量 −', '页面向下滚动', '重做', '下一个最近会话 / 标签*'),
 ]
+if dual:
+    rows[0] = ('语音', '按住说话，松开结束（当前模式）', '—', '—')
+    rows[7] = ('电源', 'Esc：取消 / 关闭弹窗', '播放 / 暂停', '⇧Tab：上一个控件')
+    rows[8] = ('TV', '切换应用', '微信 / Typeless 切换', 'Codex 模型选择器*')
 parts = [
     '<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1600" viewBox="0 0 1600 1600">',
     '<rect width="1600" height="1600" fill="#101827"/>',
@@ -39,6 +45,9 @@ notes = [
     '* 主页查找与 TV 模型：依赖目标应用。Tab 只移动应用支持的可聚焦控件。',
     '语音：实际快捷键 Fn；SayAll 开启 Fn 点按兼容；两端麦克风都选 MiRemoteV 2ch。',
 ]
+if dual:
+    parts = [p.replace("微信打字 + Typeless 语音｜SayAll 1.9.21｜RC003｜v2 · 2026-10-03", "默认微信语音 · TV 双击切 Typeless｜SayAll 1.9.21｜v3 双语音") for p in parts]
+    notes[-1] = "语音：默认微信；TV 双击切换模式；录音中切换在松开后生效。"
 for i, note in enumerate(notes):
     parts.append(f'<text x="75" y="{1120+i*39}" class="small">{escape(note)}</text>')
 parts += [
@@ -49,4 +58,6 @@ parts += [
     '<text x="90" y="1480" class="body">切控件：菜单短按往后、TV 长按往前；退出菜单用电源短按。</text>',
     '</svg>',
 ]
-Path(__file__).with_name('remote-keymap-zh.svg').write_text('\n'.join(parts), encoding='utf-8')
+if dual:
+    parts = [p.replace('TV 长按往前', '电源长按往前') for p in parts]
+Path(__file__).with_name('remote-keymap-dual-voice-zh.svg' if dual else 'remote-keymap-zh.svg').write_text('\n'.join(parts), encoding='utf-8')

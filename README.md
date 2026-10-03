@@ -27,6 +27,12 @@
 
 完整设计和适用范围见[按键说明](docs/keymap.md)。`*` 表示依赖 Codex 版本与焦点状态；确定键长按的“引导”已在这台 Mac 上的**回复进行中、输入框聚焦**场景通过实体按键测试。当前核对的 Codex 桌面版默认“回车发送”时，会在回复中把 `⌘Return` 解释为与默认排队相反的“引导”；在空闲时，同一个键只会正常发送一条新消息。
 
+## 可选：微信与 Typeless 双语音
+
+默认按住语音用微信，双击 TV 切换到 Typeless，再双击切回；普通打字保持微信。此扩展需要本仓库的原生切换组件，安装与实体测试步骤见[双语音设置](docs/dual-voice.md)。标准预设继续使用上方映射；双语音预设把 TV 长按改为模型选择、电源长按改为 Shift-Tab。
+
+[双语音按键速查图](assets/remote-keymap-dual-voice-zh.png)
+
 ## 首次设置
 
 环境：macOS 13+、小米蓝牙遥控器 2 Pro（RC003）、SayAll 1.9.21（本预设核对版本）、Python 3；若使用语音，还需要 Typeless、微信输入法和 SayAll 支持的虚拟麦克风。具体安装要求以[SayAll 上游说明](https://github.com/HD838A/remote-mic-app#%E4%BD%BF%E7%94%A8%E8%A6%81%E6%B1%82)为准。

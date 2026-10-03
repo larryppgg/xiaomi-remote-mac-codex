@@ -1,3 +1,5 @@
+> 本页为 Typeless 单语音方案。默认微信、TV 双击切 Typeless 的可选方案见 [双语音设置](dual-voice.md)，两者的 Fn 配置不同。
+
 # 微信打字＋Typeless 遥控器语音
 
 键盘使用微信输入法，遥控器语音由 Typeless 识别。Typeless 把结果插入当前输入框，无需切换键盘输入源。
