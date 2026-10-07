@@ -29,7 +29,7 @@
 
 ## 可选：微信与 Typeless 双语音
 
-默认按住语音用微信，双击 TV 切换到 Typeless，再双击切回；普通打字保持微信。此扩展需要本仓库的原生切换组件，安装与实体测试步骤见[双语音设置](docs/dual-voice.md)。标准预设继续使用上方映射；双语音预设把 TV 长按改为模型选择、电源长按改为 Shift-Tab。
+默认按住语音用微信，双击 TV 切换到 Typeless，再双击切回；普通打字保持微信。此扩展需要本仓库的原生切换组件，安装与实体测试步骤见[双语音设置](docs/dual-voice.md)。标准预设继续使用上方映射；双语音预设保留 TV 短按切应用，TV 长按改为模型选择、电源长按改为 Shift-Tab；主页长按打开 Codex 并用 Option+L 聚焦输入框。微信按住说话使用独立的 Control+Shift+空格，避免抢先拦截 SayAll 的 Fn。
 
 [双语音按键速查图](assets/remote-keymap-dual-voice-zh.png)
 

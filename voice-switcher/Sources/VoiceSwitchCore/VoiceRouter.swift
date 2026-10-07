@@ -56,10 +56,10 @@ public struct VoiceRouter {
 }
 
 public enum RecoveryAction: Equatable {
-    case releaseFn, cancelTypeless, none
+    case releaseWeChatKey, cancelTypeless, none
     public static func forSession(_ mode: VoiceMode?) -> RecoveryAction {
         switch mode {
-        case .wechat: return .releaseFn
+        case .wechat: return .releaseWeChatKey
         case .typeless: return .cancelTypeless
         case nil: return .none
         }

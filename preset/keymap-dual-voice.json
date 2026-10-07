@@ -94,7 +94,8 @@
         "application": "com.google.Chrome"
       },
       "longPress": {
-        "action": "openCodex"
+        "action": "openCustomApplication",
+        "application": "codex-composer"
       }
     },
     "menu": {
@@ -149,5 +150,6 @@
         }
       }
     }
-  }
+  },
+  "composerHomeLong": true
 }

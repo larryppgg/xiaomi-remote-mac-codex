@@ -25,6 +25,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
     var terminationSources: [DispatchSourceSignal] = []
     var commandChordHeld = false
     var commandChordGeneration = 0
+    var wechatChordHeld = false
     let defaults = UserDefaults.standard
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -90,7 +91,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         content.addSubview(label)
         let guide = NSTextField(wrappingLabelWithString:
             "默认使用微信语音。双击 TV 切换，按住语音键说话，松开结束。\n\n" +
-            "微信：启用 Fn 按住说话。Typeless：只绑定左 Command + 右 Command。\n" +
+            "微信：Control + Shift + 空格 按住说话。Typeless：只绑定左 Command + 右 Command。\n" +
             "SayAll：保留 Fn 点按兼容；两端麦克风均为 MiRemoteV 2ch。")
         guide.font = .systemFont(ofSize: 14)
         guide.frame = NSRect(x: 28, y: 103, width: 504, height: 136)
@@ -239,7 +240,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         armed = false
         defaults.set(false, forKey: "enabled")
         switch action {
-        case .releaseFn: post(code: 63, down: false, flags: [])
+        case .releaseWeChatKey: releaseWeChatChord()
         case .cancelTypeless:
             // Escape cancels; unlike a toggle chord, it cannot start recording.
             if !NSRunningApplication.runningApplications(withBundleIdentifier: "now.typeless.desktop").isEmpty {
@@ -258,14 +259,14 @@ final class Switcher: NSObject, NSApplicationDelegate {
             switch effect {
             case let .start(mode):
                 if mode == .wechat {
-                    post(code: 63, down: true, flags: .maskSecondaryFn)
+                    pressWeChatChord()
                 } else {
                     commandPairTap()
                 }
                 log("trigger_start mode=\(mode.rawValue) result=posted text_result=unknown")
             case let .stop(mode):
                 if mode == .wechat {
-                    post(code: 63, down: false, flags: [])
+                    releaseWeChatChord()
                 } else {
                     commandPairTap()
                 }
@@ -279,6 +280,24 @@ final class Switcher: NSObject, NSApplicationDelegate {
             }
         }
         if !effects.isEmpty { DispatchQueue.main.async { self.refresh() } }
+    }
+
+    /// Match WeChat's recorded left Control + left Shift + Space chord,
+    /// including physical modifier transitions rather than Space flags alone.
+    func pressWeChatChord() {
+        guard !wechatChordHeld else { return }
+        wechatChordHeld = true
+        post(code: 59, down: true, flags: CGEventFlags(rawValue: 0x40001))
+        post(code: 56, down: true, flags: CGEventFlags(rawValue: 0x60003))
+        post(code: 49, down: true, flags: CGEventFlags(rawValue: 0x60003))
+    }
+
+    func releaseWeChatChord() {
+        guard wechatChordHeld else { return }
+        wechatChordHeld = false
+        post(code: 49, down: false, flags: CGEventFlags(rawValue: 0x60003))
+        post(code: 56, down: false, flags: CGEventFlags(rawValue: 0x40001))
+        post(code: 59, down: false, flags: [])
     }
 
     /// Typeless's visible setting is a standalone Left Cmd + Right Cmd chord.
@@ -384,6 +403,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         if router.active != nil { recover(reason: "exit") }
         releaseCommandChord()
+        releaseWeChatChord()
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
         log("exit keys_released=true")
         try? logHandle?.close()

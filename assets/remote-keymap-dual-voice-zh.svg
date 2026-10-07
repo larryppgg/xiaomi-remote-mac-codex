@@ -34,7 +34,7 @@
 <text x="90" y="670" class="body">主页</text>
 <text x="305" y="670" class="body">⌘K：命令 / 会话查找*</text>
 <text x="815" y="670" class="body">打开 Chrome</text>
-<text x="1180" y="670" class="body">打开 Codex</text>
+<text x="1180" y="670" class="body">Codex + 回输入框</text>
 <rect x="65" y="700" width="1470" height="72" rx="8" fill="#192638"/>
 <text x="90" y="745" class="body">菜单</text>
 <text x="305" y="745" class="body">Tab：下一个控件</text>

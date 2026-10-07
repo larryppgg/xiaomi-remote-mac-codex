@@ -64,6 +64,17 @@ def choose_profile(profiles, index):
     return matches[0]
 
 
+def codex_path():
+    for path in (Path("/Applications/Codex.app"), Path("/Applications/ChatGPT.app"),
+                 Path.home() / "Applications/Codex.app", Path.home() / "Applications/ChatGPT.app"):
+        info = path / "Contents/Info.plist"
+        if info.is_file():
+            with info.open("rb") as file:
+                if plistlib.load(file).get("CFBundleIdentifier") == "com.openai.codex":
+                    return path
+    raise ValueError("Install the Codex desktop app before configuring composer focus")
+
+
 def prepare(plist, preset, profile_index):
     updated = copy.deepcopy(plist)
     profiles = decoded_json(updated, "remoteDeviceProfiles", [])
@@ -83,6 +94,23 @@ def prepare(plist, preset, profile_index):
     secondary = copy.deepcopy(preset["secondaryButtonBindings"])
     secondary["home"]["doubleClick"].pop("application")
     secondary["home"]["doubleClick"]["applicationProfileID"] = chrome["id"]
+    if preset.get("composerHomeLong"):
+        target = codex_path()
+        with (target / "Contents/Info.plist").open("rb") as file:
+            bundle = plistlib.load(file)["CFBundleIdentifier"]
+        focus_id = "7D39BBA8-2A2D-45F1-9E63-4F6836CA617A"
+        focus = next((item for item in apps if item.get("id") == focus_id), None)
+        if focus is not None and focus.get("bundleIdentifier") != bundle:
+            raise ValueError("Composer profile ID is already occupied; inspect it first")
+        if focus is None:
+            focus = {"id": focus_id}
+            apps.append(focus)
+        focus.update({"displayName": "Codex · 输入框", "bundleIdentifier": bundle,
+                      "applicationPath": str(target), "focusStrategy": "keyboardShortcut",
+                      "focusShortcut": {"modifierFlagsRawValue": 524288, "keyCode": 37, "keyLabel": "L"}})
+        focus.pop("accessibilityTarget", None)
+        secondary["home"]["longPress"].pop("application", None)
+        secondary["home"]["longPress"]["applicationProfileID"] = focus_id
     mappings = {
         "buttonBindings": copy.deepcopy(preset["buttonBindings"]),
         "buttonShortcuts": copy.deepcopy(preset["buttonShortcuts"]),
