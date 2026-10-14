@@ -7,19 +7,20 @@ public enum RouteEffect: Equatable {
     case start(VoiceMode), stop(VoiceMode), mode(VoiceMode), deferred(VoiceMode)
 }
 
-/// SayAll's Fn tap mode emits one pulse after audio preparation and another
-/// after audio drains. Route those pulses, preserving its timing and audio.
+/// SayAll's software Left Command hold carries explicit start/stop edges.
+/// A lost or repeated edge must never invert the next recording.
 public struct VoiceRouter {
     public private(set) var mode: VoiceMode = .wechat
     public private(set) var active: VoiceMode?
     public private(set) var pending: VoiceMode?
-    private var pulseHeld = false
     public init() {}
 
-    public mutating func pulse(down: Bool) -> [RouteEffect] {
-        if !down { pulseHeld = false; return [] }
-        guard !pulseHeld else { return [] }
-        pulseHeld = true
+    public mutating func hold(down: Bool) -> [RouteEffect] {
+        if down {
+            guard active == nil else { return [] }
+            active = mode
+            return [.start(mode)]
+        }
         if let active {
             self.active = nil
             var effects: [RouteEffect] = [.stop(active)]
@@ -30,8 +31,7 @@ public struct VoiceRouter {
             }
             return effects
         }
-        active = mode
-        return [.start(mode)]
+        return []
     }
 
     public mutating func toggle() -> [RouteEffect] {
@@ -50,7 +50,6 @@ public struct VoiceRouter {
         let effects = active.map { [RouteEffect.stop($0)] } ?? []
         active = nil
         pending = nil
-        pulseHeld = false
         return effects
     }
 }

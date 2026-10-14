@@ -1,6 +1,6 @@
 # 微信与 Typeless 双语音模式
 
-此方案是本仓库的可选扩展，不是 SayAll 原生功能。它保持 SayAll 1.9.21 的 Fn 点按兼容和音频传输，由本仓库的「遥控器语音切换」组件转换触发事件。
+此方案是本仓库的可选扩展，不是 SayAll 原生功能。它使用 SayAll 1.9.21 原生的左 Command 按住事件和音频传输，由本仓库的「遥控器语音切换」组件转换触发事件。
 
 ## 使用
 
@@ -25,7 +25,7 @@
 3. 经用户对新组件授权后，在系统设置的辅助功能中加入并允许「遥控器语音切换」。系统若另外要求输入监控，同样由用户授权。该系统权限涉及键盘事件；组件在代码中只接受 SayAll 的 Bundle ID、注入标记及指定键码，其他事件原样通过。不记录普通键盘、音频、输入文字、账户或第三方应用历史。
 4. Typeless 设置：Dictate 只绑定 **左 Command + 右 Command**，移除 Fn，防止它与微信同时识别。麦克风选择 `MiRemoteV 2ch`。不要只依据向导推荐文字判断快捷键已保存，必须读取实际设置界面。
 5. 微信输入法设置 → 语音输入：启用「按住说话」，快捷键为 **Control + Shift + 空格**，移除原来的 Fn 绑定；麦克风选择 `MiRemoteV 2ch`。普通键盘输入源保留微信。设置程序在微信输入法安装包中的 `WeTypeSettings.app`。
-6. SayAll：保留语音触发键 Fn 和「语音键模拟 Fn 点按」。退出 SayAll 后应用可选预设：
+6. SayAll：语音触发键选择「左 Command」，关闭「语音键模拟 Fn 点按」。组件只消费带 SayAll 标记且来源进程为 SayAll 的左 Command；普通键盘 Command 不改写。退出 SayAll 后应用可选预设：
 
    ```bash
    python3 preset/apply.py --preset keymap-dual-voice.json
@@ -69,9 +69,9 @@
 
 Typeless 的点按启停与快捷键设置依据[官方听写说明](https://www.typeless.com/help/quickstart/dictate)和[官方设置说明](https://www.typeless.com/help/quickstart/settings)。
 
-## 避免 Fn 被输入法先拦截
+## 独立快捷键与明确启停
 
-微信按住说话使用独立的 Control+Shift+空格，Typeless 使用左右 Command；两者都不绑定 Fn。SayAll 仍输出带其标记的 Fn，切换器将它转换为当前工具的独立快捷键。不依赖接口顺序轮询，也不增加后台服务。普通键盘 Fn 不再作为微信语音快捷键。
+微信按住说话使用独立的 Control+Shift+空格，Typeless 使用左右 Command；两者都不绑定 Fn。SayAll 输出带其标记的左 Command 按下／松开，切换器将它转换为当前工具的独立快捷键。不依赖接口顺序轮询，也不增加后台服务。普通键盘 Fn 不再作为微信语音快捷键。
 
 构建目录受云盘占位文件影响时，可将编译缓存与产物放在本机缓存目录：
 
@@ -82,3 +82,9 @@ voice-switcher/build.sh
 ```
 
 使用该参数时，应复制命令最后输出的 `.app` 路径，替代默认 `dist` 路径。
+
+2026-10-14 起双语音关闭 Fn 点按转换：按下只开始、松开只结束，重复按下／松开忽略，孤立松开不启动。旧版组件必须与旧 Fn 设置一起使用；升级组件时同步改 SayAll 为左 Command 按住。标准 Typeless 单语音方案仍使用 Fn 点按兼容，见 `voice-input.md`。
+
+组件使用进程生命周期排他锁；登录启动和手动打开同时发生时，只允许一个实例接管事件。进程退出或崩溃后锁由系统释放，无需删除锁文件。
+
+本次明确边沿版本的代码、构建签名、配置读回与单实例运行检查已通过；微信与 Typeless 连续两段真实上屏仍待用户验证，不能沿用旧版的通过结果。

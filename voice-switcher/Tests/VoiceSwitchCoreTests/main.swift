@@ -10,51 +10,49 @@ func requireTrue(_ a: Bool) { precondition(a) }
 func requireFalse(_ a: Bool) { precondition(!a) }
 
 final class VoiceRouterChecks {
-    func testWechatHoldSpansBothPulses() {
+    func testWechatHoldHasExplicitRelease() {
         var r = VoiceRouter()
-        requireEqual(r.pulse(down: true), [.start(.wechat)])
-        requireEqual(r.pulse(down: false), [])
+        requireEqual(r.hold(down: true), [.start(.wechat)])
         requireEqual(r.active, .wechat)
-        requireEqual(r.pulse(down: true), [.stop(.wechat)])
+        requireEqual(r.hold(down: false), [.stop(.wechat)])
         requireNil(r.active)
     }
     func testTypelessAndBack() {
         var r = VoiceRouter()
         requireEqual(r.toggle(), [.mode(.typeless)])
-        requireEqual(r.pulse(down: true), [.start(.typeless)])
-        _ = r.pulse(down: false)
-        requireEqual(r.pulse(down: true), [.stop(.typeless)])
+        requireEqual(r.hold(down: true), [.start(.typeless)])
+        requireEqual(r.hold(down: false), [.stop(.typeless)])
         requireEqual(r.toggle(), [.mode(.wechat)])
     }
     func testRepeatDownDoesNotStopRecording() {
         var r = VoiceRouter()
-        _ = r.pulse(down: true)
-        requireEqual(r.pulse(down: true), [])
+        _ = r.hold(down: true)
+        requireEqual(r.hold(down: true), [])
         requireEqual(r.active, .wechat)
     }
     func testSwitchDuringRecordingWaitsUntilStopAndDoesNotStopWrongEngine() {
         var r = VoiceRouter()
-        _ = r.pulse(down: true); _ = r.pulse(down: false)
+        _ = r.hold(down: true)
         requireEqual(r.toggle(), [.deferred(.typeless)])
         requireEqual(r.active, .wechat)
         requireEqual(r.mode, .wechat)
-        requireEqual(r.pulse(down: true), [.stop(.wechat), .mode(.typeless)])
-        _ = r.pulse(down: false)
-        requireEqual(r.pulse(down: true), [.start(.typeless)])
+        requireEqual(r.hold(down: false), [.stop(.wechat), .mode(.typeless)])
+        _ = r.hold(down: false)
+        requireEqual(r.hold(down: true), [.start(.typeless)])
     }
     func testTwoDeferredTogglesCancelEachOther() {
         var r = VoiceRouter()
-        _ = r.pulse(down: true); _ = r.pulse(down: false)
+        _ = r.hold(down: true)
         _ = r.toggle(); _ = r.toggle()
         requireNil(r.pending)
-        requireEqual(r.pulse(down: true), [.stop(.wechat)])
+        requireEqual(r.hold(down: false), [.stop(.wechat)])
     }
     func testRecoveryReleasesOnceAndAllowsNewSession() {
         var r = VoiceRouter()
-        _ = r.toggle(); _ = r.pulse(down: true)
+        _ = r.toggle(); _ = r.hold(down: true)
         requireEqual(r.reset(), [.stop(.typeless)])
         requireEqual(r.reset(), [])
-        requireEqual(r.pulse(down: true), [.start(.typeless)])
+        requireEqual(r.hold(down: true), [.start(.typeless)])
     }
     func testPhysicalFnAndOtherAppsSyntheticEventsAreExcluded() {
         requireFalse(SayAllEventFilter.accepts(marker: 0, sourceIsSayAll: true))
@@ -69,7 +67,7 @@ final class VoiceRouterChecks {
 }
 
 let checks = VoiceRouterChecks()
-checks.testWechatHoldSpansBothPulses()
+checks.testWechatHoldHasExplicitRelease()
 checks.testTypelessAndBack()
 checks.testRepeatDownDoesNotStopRecording()
 checks.testSwitchDuringRecordingWaitsUntilStopAndDoesNotStopWrongEngine()
@@ -89,3 +87,13 @@ requireTrue(StreamIdleGuard.isSafe(last: .stopped, age: 3.1))
 requireFalse(StreamIdleGuard.isSafe(last: .boot, age: 0.5))
 requireTrue(StreamIdleGuard.isSafe(last: .boot, age: 10))
 print("PASS: active, draining, unknown and fresh-launch gates")
+
+var lostPress = VoiceRouter()
+requireEqual(lostPress.hold(down: false), []) // orphan release never starts
+requireEqual(lostPress.hold(down: true), [.start(.wechat)])
+requireEqual(lostPress.hold(down: true), []) // repeated press never stops
+requireEqual(lostPress.hold(down: false), [.stop(.wechat)])
+requireEqual(lostPress.hold(down: false), []) // repeated release never restarts
+requireEqual(lostPress.hold(down: true), [.start(.wechat)])
+requireEqual(lostPress.hold(down: false), [.stop(.wechat)])
+print("PASS: orphan and repeated edges cannot invert recording")

@@ -92,7 +92,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         let guide = NSTextField(wrappingLabelWithString:
             "默认使用微信语音。双击 TV 切换，按住语音键说话，松开结束。\n\n" +
             "微信：Control + Shift + 空格 按住说话。Typeless：只绑定左 Command + 右 Command。\n" +
-            "SayAll：保留 Fn 点按兼容；两端麦克风均为 MiRemoteV 2ch。")
+            "SayAll：左 Command 长按；关闭 Fn 点按兼容。两端麦克风均为 MiRemoteV 2ch。")
         guide.font = .systemFont(ofSize: 14)
         guide.frame = NSRect(x: 28, y: 103, width: 504, height: 136)
         content.addSubview(guide)
@@ -185,12 +185,12 @@ final class Switcher: NSObject, NSApplicationDelegate {
         guard NSRunningApplication(processIdentifier: pid)?.bundleIdentifier == "com.hd838a.RemoteMic"
         else { return Unmanaged.passUnretained(event) }
         let code = event.getIntegerValueField(.keyboardEventKeycode)
-        if code == 63 {
+        if code == 55 {
             // Once installed, a paused router consumes verified remote tails.
-            // A delayed stop pulse must not reach WeChat as a fresh Fn press.
+            // A delayed release cannot begin another recording.
             guard armed else { return nil }
-            let down = type == .keyDown || (type == .flagsChanged && event.flags.contains(.maskSecondaryFn))
-            perform(router.pulse(down: down))
+            let down = type == .keyDown || (type == .flagsChanged && event.flags.contains(.maskCommand))
+            perform(router.hold(down: down))
             return nil
         }
         if SayAllEventFilter.isModeKey(code: code, flags: event.flags.rawValue) {
@@ -410,6 +410,23 @@ final class Switcher: NSObject, NSApplicationDelegate {
     }
 }
 
+// Login launch and opening the app can race. Keep one owner of the event tap.
+// The descriptor stays open for the process lifetime; the OS releases the lock
+// on exit, so crashes cannot leave a stale lock blocking the next launch.
+let lockDirectory = FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent("Library/Application Support/RemoteVoiceSwitcher")
+do {
+    try FileManager.default.createDirectory(at: lockDirectory, withIntermediateDirectories: true,
+                                           attributes: [.posixPermissions: 0o700])
+} catch { exit(1) }
+let processLockFD = open(lockDirectory.appendingPathComponent("instance.lock").path,
+                         O_CREAT | O_RDWR | O_CLOEXEC | O_NOFOLLOW, 0o600)
+guard processLockFD >= 0 else { exit(1) }
+guard flock(processLockFD, LOCK_EX | LOCK_NB) == 0 else {
+    let busy = errno == EWOULDBLOCK
+    close(processLockFD)
+    exit(busy ? 0 : 1)
+}
 let application = NSApplication.shared
 let delegate = Switcher()
 application.delegate = delegate
