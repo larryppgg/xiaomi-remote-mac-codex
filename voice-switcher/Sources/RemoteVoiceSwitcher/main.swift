@@ -59,15 +59,15 @@ final class Switcher: NSObject, NSApplicationDelegate {
             guard let self else { return }
             if self.startupPending, self.sayAllQuiet(), self.installTap() {
                 self.startupPending = false
-                self.router = VoiceRouter()
+                _ = self.router.reset()
                 self.armed = true
-                self.log("enabled default=wechat source=deferred_startup")
+                self.log("enabled mode=\(self.router.mode.rawValue) source=deferred_resume")
                 self.window.orderOut(nil)
                 self.refresh()
             }
             if self.router.active != nil,
                NSRunningApplication.runningApplications(withBundleIdentifier: "com.hd838a.RemoteMic").isEmpty {
-                self.recover(reason: "sayall_exit")
+                self.recover(reason: .sayAllExit)
             }
             if self.quitting, self.sayAllQuiet() { NSApp.reply(toApplicationShouldTerminate: true) }
         }
@@ -118,8 +118,8 @@ final class Switcher: NSObject, NSApplicationDelegate {
 
     @objc func toggleEnabled() {
         startupPending = false
-        if armed {
-            recover(reason: "user_pause")
+        if armed || defaults.bool(forKey: "enabled") {
+            recover(reason: .userPause)
         } else {
             guard AXIsProcessTrusted() else {
                 toast("请先在辅助功能中允许“遥控器语音切换”")
@@ -174,7 +174,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
     func handle(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             DispatchQueue.main.async {
-                self.recover(reason: "tap_interrupted")
+                self.recover(reason: .tapInterrupted)
                 if let tap = self.tap { CGEvent.tapEnable(tap: tap, enable: true) }
             }
             return Unmanaged.passUnretained(event)
@@ -231,14 +231,15 @@ final class Switcher: NSObject, NSApplicationDelegate {
         return false // unknown is not a safe start condition
     }
 
-    func recover(reason: String) {
-        startupPending = false
+    func recover(reason: RecoveryCause) {
+        let enabled = reason.enabledAfterRecovery(wasEnabled: defaults.bool(forKey: "enabled"))
+        startupPending = enabled && reason.resumesInProcess
         releaseCommandChord()
         let action = RecoveryAction.forSession(router.active)
         _ = router.reset()
         modeKeyHeld = false
         armed = false
-        defaults.set(false, forKey: "enabled")
+        defaults.set(enabled, forKey: "enabled")
         switch action {
         case .releaseWeChatKey: releaseWeChatChord()
         case .cancelTypeless:
@@ -249,8 +250,9 @@ final class Switcher: NSObject, NSApplicationDelegate {
             }
         case .none: break
         }
-        log("recovery reason=\(reason) action=\(action) text_result=unknown")
-        toast("语音切换已暂停；松开语音键后可重新启用")
+        log("recovery reason=\(reason.rawValue) action=\(action) enabled=\(enabled) resume_pending=\(startupPending) text_result=unknown")
+        if reason == .userPause { toast("语音切换已暂停") }
+        else if startupPending { toast("语音连接恢复中；请松开语音键") }
         refresh()
     }
 
@@ -335,10 +337,10 @@ final class Switcher: NSObject, NSApplicationDelegate {
 
     func refresh() {
         let mode = router.mode == .wechat ? "微信" : "Typeless"
-        status.button?.title = armed ? "语音：\(mode)" : "语音：未启用"
+        status.button?.title = armed ? "语音：\(mode)" : (startupPending ? "语音：等待就绪" : "语音：未启用")
         label.stringValue = armed ? "当前：\(mode)语音\n\(router.active == nil ? "双击 TV 切换；按住语音说话" : "语音会话进行中")" :
-            "尚未启用\n先完成两端快捷键配置和辅助功能授权"
-        button.title = armed ? "暂停双语音" : "启用双语音"
+            (startupPending ? "已保留启用设置\n等待语音链路就绪；请松开语音键" : "尚未启用\n先完成两端快捷键配置和辅助功能授权")
+        button.title = (armed || startupPending) ? "暂停双语音" : "启用双语音"
     }
 
     func toast(_ message: String) {
@@ -391,7 +393,8 @@ final class Switcher: NSObject, NSApplicationDelegate {
     }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        if router.active != nil { recover(reason: "quit") }
+        startupPending = false
+        if router.active != nil { recover(reason: .quit) }
         if tap != nil, !sayAllQuiet() {
             quitting = true
             armed = false
@@ -401,7 +404,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         return .terminateNow
     }
     func applicationWillTerminate(_ notification: Notification) {
-        if router.active != nil { recover(reason: "exit") }
+        if router.active != nil { recover(reason: .exit) }
         releaseCommandChord()
         releaseWeChatChord()
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }

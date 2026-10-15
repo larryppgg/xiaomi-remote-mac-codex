@@ -65,6 +65,18 @@ public enum RecoveryAction: Equatable {
     }
 }
 
+/// Persist user intent separately from the event tap's temporary availability.
+public enum RecoveryCause: String, CaseIterable {
+    case userPause = "user_pause", sayAllExit = "sayall_exit"
+    case tapInterrupted = "tap_interrupted", quit, exit
+    public func enabledAfterRecovery(wasEnabled: Bool) -> Bool {
+        self == .userPause ? false : wasEnabled
+    }
+    public var resumesInProcess: Bool {
+        self == .sayAllExit || self == .tapInterrupted
+    }
+}
+
 public enum StreamBoundary { case started, stopped, boot }
 public enum StreamIdleGuard {
     public static func isSafe(last: StreamBoundary?, age: Double) -> Bool {

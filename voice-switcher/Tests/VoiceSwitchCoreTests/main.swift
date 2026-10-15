@@ -97,3 +97,10 @@ requireEqual(lostPress.hold(down: false), []) // repeated release never restarts
 requireEqual(lostPress.hold(down: true), [.start(.wechat)])
 requireEqual(lostPress.hold(down: false), [.stop(.wechat)])
 print("PASS: orphan and repeated edges cannot invert recording")
+
+for cause in RecoveryCause.allCases {
+    requireFalse(cause.enabledAfterRecovery(wasEnabled: false))
+    requireEqual(cause.enabledAfterRecovery(wasEnabled: true), cause != .userPause)
+    requireEqual(cause.resumesInProcess, cause == .sayAllExit || cause == .tapInterrupted)
+}
+print("PASS: only explicit pause clears enabled intent; transient failures resume, quit preserves preference")
