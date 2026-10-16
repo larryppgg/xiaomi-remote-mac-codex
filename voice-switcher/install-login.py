@@ -3,6 +3,7 @@
 import argparse
 import os
 import plistlib
+import re
 import subprocess
 from pathlib import Path
 
@@ -26,7 +27,15 @@ else:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(plistlib.dumps(service))
     target = f'gui/{os.getuid()}'
-    loaded = subprocess.run(['launchctl', 'print', f'{target}/{label}'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    inspection = subprocess.run(['launchctl', 'print', f'{target}/{label}'],
+                                capture_output=True, text=True)
+    loaded = inspection.returncode == 0
+    if loaded and not re.search(r'^\s*pid = \d+\s*$', inspection.stdout, re.MULTILINE):
+        # Re-register an idle job after app replacement: launchd may retain
+        # code-signing constraints for the previous executable (EX_CONFIG).
+        # A live process is never booted out by an installation rerun.
+        subprocess.run(['launchctl', 'bootout', f'{target}/{label}'], check=True)
+        loaded = False
     if not loaded:
         subprocess.run(['launchctl', 'bootstrap', target, str(path)], check=True)
     # No -k: start a stopped job without interrupting an existing recording.

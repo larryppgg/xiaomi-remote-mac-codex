@@ -12,7 +12,7 @@ SCRIPT = Path(__file__).with_name('install-login.py')
 
 
 class LoginTests(unittest.TestCase):
-    def exercise(self, loaded):
+    def exercise(self, loaded, running=False):
         calls = []
         with tempfile.TemporaryDirectory() as directory:
             home = Path(directory)
@@ -22,7 +22,8 @@ class LoginTests(unittest.TestCase):
 
             def run(command, **kwargs):
                 calls.append(command)
-                return subprocess.CompletedProcess(command, 0 if command[:2] != ['launchctl', 'print'] or loaded else 1)
+                return subprocess.CompletedProcess(command, 0 if command[:2] != ['launchctl', 'print'] or loaded else 1,
+                                                   stdout='\tpid = 123\n' if running else '\tstate = not running\n')
 
             with patch.object(Path, 'home', return_value=home), patch('subprocess.run', side_effect=run), \
                  patch('sys.argv', [str(SCRIPT), '--apply']), contextlib.redirect_stdout(io.StringIO()):
@@ -31,11 +32,18 @@ class LoginTests(unittest.TestCase):
 
     def test_registered_stopped_service_is_started_without_force_restart(self):
         calls = self.exercise(loaded=True)
-        self.assertFalse(any(c[:2] == ['launchctl', 'bootstrap'] for c in calls))
+        operations = [c[1] for c in calls if c[0] == 'launchctl']
+        self.assertEqual(operations, ['print', 'bootout', 'bootstrap', 'kickstart'])
         starts = [c for c in calls if c[:2] == ['launchctl', 'kickstart']]
         self.assertEqual(len(starts), 1)
         self.assertEqual(len(starts[0]), 3)
         self.assertNotIn('-k', starts[0])
+
+    def test_running_service_is_never_booted_out_or_restarted(self):
+        calls = self.exercise(loaded=True, running=True)
+        operations = [c[1] for c in calls if c[0] == 'launchctl']
+        self.assertEqual(operations, ['print', 'kickstart'])
+        self.assertTrue(all('-k' not in c for c in calls))
 
     def test_fresh_service_is_bootstrapped_before_start_request(self):
         calls = self.exercise(loaded=False)
