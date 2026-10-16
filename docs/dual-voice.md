@@ -57,7 +57,7 @@
 
 组件日志仅含模式和生命周期，保存在本机 `~/Library/Logs/RemoteVoiceSwitcher/switcher.log`，不要上传。没有用户语音或输入内容。
 
-回退顺序：先松开语音键；暂停并退出切换器；关闭微信 Control+Shift+空格 按住说话；Typeless 恢复 Fn 并删除左/右 Command 组合；退出 SayAll，用本机备份恢复或应用标准 `keymap.json`，再启动 SayAll。移除登录启动项：`launchctl bootout gui/$(id -u)/io.github.remote-voice-switcher`，再将 `~/Library/LaunchAgents/io.github.remote-voice-switcher.plist` 移到废纸篓。只卸载本组件，不删除微信、Typeless、SayAll 或任何聊天历史。
+回退顺序：先松开语音键；暂停并退出切换器；关闭微信 Control+Shift+空格 按住说话；Typeless 恢复 Fn 并删除左/右 Command 组合；在 SayAll 将语音触发键恢复为 Fn 并打开「语音键模拟 Fn 点按」；退出 SayAll，用本机备份恢复或应用标准 `keymap.json`，再启动 SayAll。移除登录启动项：`launchctl bootout gui/$(id -u)/io.github.remote-voice-switcher`，再将 `~/Library/LaunchAgents/io.github.remote-voice-switcher.plist` 移到废纸篓。只卸载本组件，不删除微信、Typeless、SayAll 或任何聊天历史。
 
 ## 当前验收
 
@@ -94,3 +94,13 @@ voice-switcher/build.sh
 只有用户主动点击「暂停双语音」才持久关闭启用设置。SayAll 退出或事件接口被系统中断时，组件释放当前会话按键、保留启用设置，沿用组件现有启动等待在链路安静后恢复；等待期间显示「等待就绪」。组件自身退出也保留启用偏好，下次启动使用该偏好。用户主动暂停后不会自行重新启用。
 
 2026-10-16：启用意图修复已通过全部恢复原因分类检查、组件重启保留启用、主动暂停后重启保留关闭，以及 SayAll 重启不清除启用设置的运行检查。本次安装后用户完成实体语音测试，文字正常上屏；启用偏好仍保持开启。
+
+## 2026-10-17 冲突检查修复
+
+- SayAll 会话以来源校验后的进程 PID 存活为准，避免应用列表临时漏报触发错误恢复。
+- TV 切换快捷键的松开事件不要求仍带修饰键标志，避免切换一次后锁存。
+- Typeless 异常恢复的 Esc 定向发送到 Typeless 进程，不发送给当前前台应用；实际取消结果仍需第三方工具实测。
+- 组件退出等待期间禁止重新启用事件接口或恢复录音路由。
+- 登录项安装会请求启动已注册但停止的服务，不强制重启正在运行的实例。
+
+回归检查包含普通语音路由、录音中切换、恢复偏好、TV 松开丢失修饰标志、以及登录安装的隔离测试。

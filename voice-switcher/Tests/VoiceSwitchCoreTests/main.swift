@@ -104,3 +104,14 @@ for cause in RecoveryCause.allCases {
     requireEqual(cause.resumesInProcess, cause == .sayAllExit || cause == .tapInterrupted)
 }
 print("PASS: only explicit pause clears enabled intent; transient failures resume, quit preserves preference")
+
+var modeLatch = ModeKeyLatch()
+requireEqual(modeLatch.handle(code: 80, flags: 0, down: true, up: false), .pass)
+requireEqual(modeLatch.handle(code: 80, flags: 0x1C0000, down: true, up: false), .toggle)
+requireEqual(modeLatch.handle(code: 80, flags: 0x1C0000, down: true, up: false), .consume)
+requireEqual(modeLatch.handle(code: 80, flags: 0, down: false, up: true), .consume)
+requireEqual(modeLatch.handle(code: 80, flags: 0x1C0000, down: true, up: false), .toggle)
+requireEqual(modeLatch.handle(code: 79, flags: 0, down: false, up: true), .pass)
+requireEqual(modeLatch.handle(code: 80, flags: 0, down: false, up: true), .consume)
+requireEqual(modeLatch.handle(code: 80, flags: 0, down: false, up: true), .pass)
+print("PASS: mode shortcut releases without modifiers and ignores repeated down")

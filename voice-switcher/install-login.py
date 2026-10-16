@@ -29,4 +29,7 @@ else:
     loaded = subprocess.run(['launchctl', 'print', f'{target}/{label}'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
     if not loaded:
         subprocess.run(['launchctl', 'bootstrap', target, str(path)], check=True)
-    print('Login service installed. Verify actual helper state and physical voice.')
+    # No -k: start a stopped job without interrupting an existing recording.
+    subprocess.run(['launchctl', 'kickstart', f'{target}/{label}'], check=True)
+    print('Login service installed; start requested without restarting a running helper. '
+          'Verify actual helper state and physical voice.')

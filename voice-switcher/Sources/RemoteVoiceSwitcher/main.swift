@@ -17,7 +17,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
     var hud: NSPanel?
     var hudGeneration = 0
     var heartbeat: Timer?
-    var modeKeyHeld = false
+    var modeKeyLatch = ModeKeyLatch()
     var armed = false
     var startupPending = false
     var quitting = false
@@ -26,6 +26,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
     var commandChordHeld = false
     var commandChordGeneration = 0
     var wechatChordHeld = false
+    var knownSayAllPID: pid_t?
     let defaults = UserDefaults.standard
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -65,8 +66,10 @@ final class Switcher: NSObject, NSApplicationDelegate {
                 self.window.orderOut(nil)
                 self.refresh()
             }
-            if self.router.active != nil,
-               NSRunningApplication.runningApplications(withBundleIdentifier: "com.hd838a.RemoteMic").isEmpty {
+            // Application-list snapshots can temporarily omit a live app.
+            // The PID came from a marker + bundle-verified voice event.
+            if self.router.active != nil, let pid = self.knownSayAllPID,
+               kill(pid, 0) != 0, errno == ESRCH {
                 self.recover(reason: .sayAllExit)
             }
             if self.quitting, self.sayAllQuiet() { NSApp.reply(toApplicationShouldTerminate: true) }
@@ -135,7 +138,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
                 return
             }
             router = VoiceRouter()
-            modeKeyHeld = false
+            modeKeyLatch = ModeKeyLatch()
             armed = true
             defaults.set(true, forKey: "enabled")
             log("enabled default=wechat")
@@ -175,7 +178,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             DispatchQueue.main.async {
                 self.recover(reason: .tapInterrupted)
-                if let tap = self.tap { CGEvent.tapEnable(tap: tap, enable: true) }
+                if !self.quitting, let tap = self.tap { CGEvent.tapEnable(tap: tap, enable: true) }
             }
             return Unmanaged.passUnretained(event)
         }
@@ -190,15 +193,14 @@ final class Switcher: NSObject, NSApplicationDelegate {
             // A delayed release cannot begin another recording.
             guard armed else { return nil }
             let down = type == .keyDown || (type == .flagsChanged && event.flags.contains(.maskCommand))
+            if down, router.active == nil { knownSayAllPID = pid }
             perform(router.hold(down: down))
             return nil
         }
-        if SayAllEventFilter.isModeKey(code: code, flags: event.flags.rawValue) {
-            guard armed else { return nil }
-            if type == .keyDown, !modeKeyHeld {
-                modeKeyHeld = true
-                perform(router.toggle())
-            } else if type == .keyUp { modeKeyHeld = false }
+        let modeEffect = modeKeyLatch.handle(code: code, flags: event.flags.rawValue,
+                                             down: type == .keyDown, up: type == .keyUp)
+        if modeEffect != .pass {
+            if armed, modeEffect == .toggle { perform(router.toggle()) }
             return nil
         }
         return Unmanaged.passUnretained(event)
@@ -207,8 +209,16 @@ final class Switcher: NSObject, NSApplicationDelegate {
     /// Uses only SayAll stream metadata; neither voice text nor other app data
     /// is parsed, saved or logged. Allow 3 s for its bounded audio drain/tap.
     func sayAllQuiet() -> Bool {
-        guard let application = NSRunningApplication.runningApplications(withBundleIdentifier: "com.hd838a.RemoteMic").first
-        else { return true }
+        let pid: pid_t
+        if let known = knownSayAllPID, kill(known, 0) == 0 || errno != ESRCH {
+            pid = known
+        } else if let application = NSRunningApplication.runningApplications(withBundleIdentifier: "com.hd838a.RemoteMic").first {
+            pid = application.processIdentifier
+            knownSayAllPID = pid
+        } else {
+            // Unknown is not idle. A previously verified, now-dead source is.
+            return knownSayAllPID != nil
+        }
         let path = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/RemoteMic/runtime.log")
         guard let reader = try? FileHandle(forReadingFrom: path) else { return false }
         defer { try? reader.close() }
@@ -216,7 +226,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         try? reader.seek(toOffset: end > 65_536 ? end - 65_536 : 0)
         guard let data = try? reader.readToEnd() else { return false }
         let text = String(decoding: data, as: UTF8.self)
-        let pidTag = "pid=\(application.processIdentifier) "
+        let pidTag = "pid=\(pid) "
         for line in text.split(separator: "\n").reversed() where line.contains(pidTag) {
             if line.contains("ATVV STREAM START session=") { return false }
             if line.contains("ATVV STREAM STOP session=") || line.contains("APP START version=") {
@@ -233,20 +243,21 @@ final class Switcher: NSObject, NSApplicationDelegate {
 
     func recover(reason: RecoveryCause) {
         let enabled = reason.enabledAfterRecovery(wasEnabled: defaults.bool(forKey: "enabled"))
-        startupPending = enabled && reason.resumesInProcess
+        startupPending = enabled && reason.resumesInProcess && !quitting
         releaseCommandChord()
         let action = RecoveryAction.forSession(router.active)
         _ = router.reset()
-        modeKeyHeld = false
+        modeKeyLatch = ModeKeyLatch()
         armed = false
         defaults.set(enabled, forKey: "enabled")
         switch action {
         case .releaseWeChatKey: releaseWeChatChord()
         case .cancelTypeless:
-            // Escape cancels; unlike a toggle chord, it cannot start recording.
-            if !NSRunningApplication.runningApplications(withBundleIdentifier: "now.typeless.desktop").isEmpty {
-                post(code: 53, down: true, flags: [])
-                post(code: 53, down: false, flags: [])
+            // Address cancellation to Typeless, never the current Codex/browser window.
+            // Delivery does not prove third-party cancellation (logged as unknown).
+            if let target = NSRunningApplication.runningApplications(withBundleIdentifier: "now.typeless.desktop").first {
+                post(code: 53, down: true, flags: [], targetPID: target.processIdentifier)
+                post(code: 53, down: false, flags: [], targetPID: target.processIdentifier)
             }
         case .none: break
         }
@@ -325,14 +336,15 @@ final class Switcher: NSObject, NSApplicationDelegate {
         post(code: 55, down: false, flags: [])
     }
 
-    func post(code: CGKeyCode, down: Bool, flags: CGEventFlags) {
+    func post(code: CGKeyCode, down: Bool, flags: CGEventFlags, targetPID: pid_t? = nil) {
         guard let source = CGEventSource(stateID: .hidSystemState),
               let event = CGEvent(keyboardEventSource: source, virtualKey: code, keyDown: down) else {
             log("event_create_failed"); return
         }
         event.flags = flags
         event.setIntegerValueField(.eventSourceUserData, value: ownMarker)
-        event.post(tap: .cghidEventTap)
+        if let targetPID { event.postToPid(targetPID) }
+        else { event.post(tap: .cghidEventTap) }
     }
 
     func refresh() {
@@ -393,6 +405,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
     }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        quitting = true
         startupPending = false
         if router.active != nil { recover(reason: .quit) }
         if tap != nil, !sayAllQuiet() {

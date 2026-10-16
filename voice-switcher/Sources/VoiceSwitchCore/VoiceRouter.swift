@@ -100,3 +100,22 @@ public enum SayAllEventFilter {
         code == modeKeyCode && flags & shortcutFlagMask == modeFlags
     }
 }
+
+public enum ModeKeyEffect: Equatable { case pass, consume, toggle }
+
+/// Modifier flags may already be cleared on key-up. Release the verified
+/// shortcut by key identity, while still requiring the full chord on key-down.
+public struct ModeKeyLatch {
+    private var held = false
+    public init() {}
+    public mutating func handle(code: Int64, flags: UInt64, down: Bool, up: Bool) -> ModeKeyEffect {
+        if code == SayAllEventFilter.modeKeyCode, up, held {
+            held = false
+            return .consume
+        }
+        guard down, SayAllEventFilter.isModeKey(code: code, flags: flags) else { return .pass }
+        guard !held else { return .consume }
+        held = true
+        return .toggle
+    }
+}
