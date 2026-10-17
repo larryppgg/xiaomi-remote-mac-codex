@@ -20,8 +20,11 @@ final class Switcher: NSObject, NSApplicationDelegate {
     var modeKeyLatch = ModeKeyLatch()
     var armed = false
     var startupPending = false
+    var tapRecoveryPending = false
     var quitting = false
     var logHandle: FileHandle?
+    let logQueue = DispatchQueue(label: "remote-voice-switcher.log")
+    var verifiedSayAllApplication: NSRunningApplication?
     var terminationSources: [DispatchSourceSignal] = []
     var commandChordHeld = false
     var commandChordGeneration = 0
@@ -58,7 +61,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         if !armed { showWindow() }
         heartbeat = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             guard let self else { return }
-            if self.startupPending, self.sayAllQuiet(), self.installTap() {
+            if self.startupPending, !self.tapRecoveryPending, !self.quitting, self.sayAllQuiet(), self.installTap() {
                 self.startupPending = false
                 _ = self.router.reset()
                 self.armed = true
@@ -176,23 +179,44 @@ final class Switcher: NSObject, NSApplicationDelegate {
 
     func handle(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            DispatchQueue.main.async {
-                self.recover(reason: .tapInterrupted)
-                if !self.quitting, let tap = self.tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            if !quitting, let tap { CGEvent.tapEnable(tap: tap, enable: true) }
+            if VoiceRecoveryGate.resumesIdleTap(armed: armed, active: router.active != nil,
+                                                keysHeld: wechatChordHeld || commandChordHeld, quitting: quitting) {
+                modeKeyLatch = ModeKeyLatch()
+                log("tap_resumed state=idle wait_ms=0")
+            } else {
+                // Gate routing until cleanup runs outside the time-limited tap.
+                armed = false
+                if !tapRecoveryPending {
+                    tapRecoveryPending = true
+                    DispatchQueue.main.async {
+                        self.recover(reason: .tapInterrupted)
+                        self.tapRecoveryPending = false
+                    }
+                }
             }
             return Unmanaged.passUnretained(event)
         }
         let marker = event.getIntegerValueField(.eventSourceUserData)
         guard marker == SayAllEventFilter.marker else { return Unmanaged.passUnretained(event) }
         let pid = pid_t(event.getIntegerValueField(.eventSourceUnixProcessID))
-        guard NSRunningApplication(processIdentifier: pid)?.bundleIdentifier == "com.hd838a.RemoteMic"
-        else { return Unmanaged.passUnretained(event) }
+        guard verifiesSayAllSource(pid) else { return Unmanaged.passUnretained(event) }
         let code = event.getIntegerValueField(.keyboardEventKeycode)
         if code == 55 {
             // Once installed, a paused router consumes verified remote tails.
             // A delayed release cannot begin another recording.
-            guard armed else { return nil }
+            guard !tapRecoveryPending else { return nil }
             let down = type == .keyDown || (type == .flagsChanged && event.flags.contains(.maskCommand))
+            if VoiceRecoveryGate.acceptsFreshPress(pending: startupPending, down: down,
+                                                   repeating: event.getIntegerValueField(.keyboardEventAutorepeat) != 0,
+                                                   quitting: quitting, cleaningUp: tapRecoveryPending) {
+                // A source-verified new gesture is an explicit start boundary;
+                // don't discard it while waiting for the previous stream's log.
+                startupPending = false
+                armed = true
+                log("enabled mode=\(router.mode.rawValue) source=fresh_voice_press wait_ms=0")
+            }
+            guard armed else { return nil }
             if down, router.active == nil { knownSayAllPID = pid }
             perform(router.hold(down: down))
             return nil
@@ -206,6 +230,17 @@ final class Switcher: NSObject, NSApplicationDelegate {
         return Unmanaged.passUnretained(event)
     }
 
+    func verifiesSayAllSource(_ pid: pid_t) -> Bool {
+        // Keep the validated application instance, not a bare PID: termination
+        // invalidates it even if the OS later reuses the process number.
+        if let application = verifiedSayAllApplication,
+           application.processIdentifier == pid, !application.isTerminated { return true }
+        guard let application = NSRunningApplication(processIdentifier: pid),
+              application.bundleIdentifier == "com.hd838a.RemoteMic", !application.isTerminated else { return false }
+        verifiedSayAllApplication = application
+        return true
+    }
+
     /// Uses only SayAll stream metadata; neither voice text nor other app data
     /// is parsed, saved or logged. Allow 3 s for its bounded audio drain/tap.
     func sayAllQuiet() -> Bool {
@@ -215,6 +250,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         } else if let application = NSRunningApplication.runningApplications(withBundleIdentifier: "com.hd838a.RemoteMic").first {
             pid = application.processIdentifier
             knownSayAllPID = pid
+            verifiedSayAllApplication = application
         } else {
             // Unknown is not idle. A previously verified, now-dead source is.
             return knownSayAllPID != nil
@@ -400,8 +436,11 @@ final class Switcher: NSObject, NSApplicationDelegate {
         _ = try? logHandle?.seekToEnd()
     }
     func log(_ message: String) {
-        let line = "\(ISO8601DateFormatter().string(from: Date())) \(message)\n"
-        try? logHandle?.write(contentsOf: Data(line.utf8))
+        let timestamp = Date()
+        logQueue.async {
+            let line = "\(ISO8601DateFormatter().string(from: timestamp)) \(message)\n"
+            try? self.logHandle?.write(contentsOf: Data(line.utf8))
+        }
     }
     @objc func quit() { NSApp.terminate(nil) }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -422,7 +461,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         releaseWeChatChord()
         if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
         log("exit keys_released=true")
-        try? logHandle?.close()
+        logQueue.sync { try? logHandle?.close() }
     }
 }
 

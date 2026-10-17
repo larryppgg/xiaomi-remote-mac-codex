@@ -78,6 +78,16 @@ public enum RecoveryCause: String, CaseIterable {
 }
 
 public enum StreamBoundary { case started, stopped, boot }
+
+public enum VoiceRecoveryGate {
+    public static func resumesIdleTap(armed: Bool, active: Bool, keysHeld: Bool, quitting: Bool) -> Bool {
+        armed && !active && !keysHeld && !quitting
+    }
+    public static func acceptsFreshPress(pending: Bool, down: Bool, repeating: Bool, quitting: Bool, cleaningUp: Bool = false) -> Bool {
+        pending && down && !repeating && !quitting && !cleaningUp
+    }
+}
+
 public enum StreamIdleGuard {
     public static func isSafe(last: StreamBoundary?, age: Double) -> Bool {
         guard let last else { return false }

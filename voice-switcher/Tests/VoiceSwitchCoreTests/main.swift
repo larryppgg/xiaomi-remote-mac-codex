@@ -115,3 +115,26 @@ requireEqual(modeLatch.handle(code: 79, flags: 0, down: false, up: true), .pass)
 requireEqual(modeLatch.handle(code: 80, flags: 0, down: false, up: true), .consume)
 requireEqual(modeLatch.handle(code: 80, flags: 0, down: false, up: true), .pass)
 print("PASS: mode shortcut releases without modifiers and ignores repeated down")
+
+requireTrue(VoiceRecoveryGate.resumesIdleTap(armed: true, active: false, keysHeld: false, quitting: false))
+requireFalse(VoiceRecoveryGate.resumesIdleTap(armed: true, active: true, keysHeld: false, quitting: false))
+requireFalse(VoiceRecoveryGate.resumesIdleTap(armed: true, active: false, keysHeld: true, quitting: false))
+requireFalse(VoiceRecoveryGate.resumesIdleTap(armed: false, active: false, keysHeld: false, quitting: false))
+requireFalse(VoiceRecoveryGate.resumesIdleTap(armed: true, active: false, keysHeld: false, quitting: true))
+requireTrue(VoiceRecoveryGate.acceptsFreshPress(pending: true, down: true, repeating: false, quitting: false))
+requireFalse(VoiceRecoveryGate.acceptsFreshPress(pending: false, down: true, repeating: false, quitting: false))
+requireFalse(VoiceRecoveryGate.acceptsFreshPress(pending: true, down: false, repeating: false, quitting: false))
+requireFalse(VoiceRecoveryGate.acceptsFreshPress(pending: true, down: true, repeating: true, quitting: false))
+requireFalse(VoiceRecoveryGate.acceptsFreshPress(pending: true, down: true, repeating: false, quitting: true))
+for mode in [VoiceMode.wechat, .typeless] {
+    var rapid = VoiceRouter()
+    if mode == .typeless { _ = rapid.toggle() }
+    for _ in 0..<20 {
+        requireEqual(rapid.hold(down: true), [.start(mode)])
+        requireEqual(rapid.hold(down: false), [.stop(mode)])
+    }
+}
+print("PASS: idle tap resumes immediately; fresh press bypasses recovery wait; rapid consecutive sessions do not need cooldown")
+
+requireFalse(VoiceRecoveryGate.acceptsFreshPress(pending: true, down: true, repeating: false, quitting: false, cleaningUp: true))
+print("PASS: queued cleanup blocks fresh starts until cleanup completes")
