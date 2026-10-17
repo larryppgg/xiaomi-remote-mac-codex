@@ -1,3 +1,4 @@
+import Foundation
 import VoiceSwitchCore
 
 func requireEqual<T: Equatable>(_ a: T, _ b: T, file: StaticString = #file, line: UInt = #line) {
@@ -138,3 +139,47 @@ print("PASS: idle tap resumes immediately; fresh press bypasses recovery wait; r
 
 requireFalse(VoiceRecoveryGate.acceptsFreshPress(pending: true, down: true, repeating: false, quitting: false, cleaningUp: true))
 print("PASS: queued cleanup blocks fresh starts until cleanup completes")
+
+// Real filesystem notifications: no keyboard/voice injection is used here.
+let edgeDirectory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+try FileManager.default.createDirectory(at: edgeDirectory, withIntermediateDirectories: true)
+let edgeURL = edgeDirectory.appendingPathComponent("runtime.log")
+let edgePrefix = "2026-10-18T01:00:00.000Z pid=123 ver=1.9.21 build=174 VOICE KEY mode=left_command "
+try Data((edgePrefix + "DOWN\n").utf8).write(to: edgeURL)
+var observedEdges: [SayAllVoiceEdge] = []
+let edgeReader = VoiceEdgeReader(url: edgeURL) { observedEdges.append($0) }
+requireTrue(edgeReader.start())
+func settleEdges() { RunLoop.main.run(until: Date().addingTimeInterval(0.08)) }
+func appendEdges(_ text: String, to url: URL = edgeURL) throws {
+    let h = try FileHandle(forWritingTo: url)
+    try h.seekToEnd()
+    try h.write(contentsOf: Data(text.utf8))
+    try h.close()
+}
+settleEdges()
+requireEqual(observedEdges.count, 0) // No historical replay.
+try appendEdges(edgePrefix + "DO")
+settleEdges()
+requireEqual(observedEdges.count, 0)
+try appendEdges("WN\n" + edgePrefix + "UP\n")
+settleEdges()
+requireEqual(observedEdges.map { $0.down }, [true, false])
+try appendEdges("unrelated text\n" + String(repeating: "a", count: 2000) + "\n")
+settleEdges()
+requireEqual(observedEdges.count, 2)
+// More than one read budget followed by rename must preserve the old UP tail.
+try appendEdges(String(repeating: "ignored\n", count: 40000) + edgePrefix + "UP\n")
+try FileManager.default.moveItem(at: edgeURL, to: edgeDirectory.appendingPathComponent("runtime.1.log"))
+try Data((edgePrefix + "DOWN\n" + edgePrefix + "UP\n").utf8).write(to: edgeURL)
+settleEdges()
+requireEqual(observedEdges.map { $0.down }, [true, false, false, true, false])
+edgeReader.stop()
+requireTrue(edgeReader.start())
+settleEdges()
+requireEqual(observedEdges.count, 5) // Restart also skips history.
+try appendEdges(edgePrefix + "DOWN\n" + edgePrefix + "UP\n")
+settleEdges()
+requireEqual(observedEdges.map { $0.down }, [true, false, false, true, false, true, false])
+edgeReader.stop()
+try FileManager.default.removeItem(at: edgeDirectory)
+print("PASS: filesystem voice edges preserve fragments, ordered rotation tails, and skip startup history")

@@ -8,6 +8,7 @@ private let ownMarker: Int64 = 0x5256_5357
 
 final class Switcher: NSObject, NSApplicationDelegate {
     var router = VoiceRouter()
+    var voiceEdges: VoiceEdgeReader?
     var tap: CFMachPort?
     var tapSource: CFRunLoopSource?
     var status: NSStatusItem!
@@ -156,8 +157,15 @@ final class Switcher: NSObject, NSApplicationDelegate {
     }
 
     func installTap() -> Bool {
-        if tap != nil { return true }
         guard AXIsProcessTrusted() else { return false }
+        if voiceEdges == nil {
+            let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/RemoteMic/runtime.log")
+            let reader = VoiceEdgeReader(url: url) { [weak self] edge in self?.handleVoiceEdge(edge) }
+            guard reader.start() else { log("voice_source_unavailable"); return false }
+            voiceEdges = reader
+            log("voice_source_ready transport=sayall_metadata")
+        }
+        if tap != nil { return true }
         let mask = (1 << CGEventType.flagsChanged.rawValue) |
                    (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
         guard let port = CGEvent.tapCreate(tap: .cghidEventTap, place: .headInsertEventTap,
@@ -180,45 +188,31 @@ final class Switcher: NSObject, NSApplicationDelegate {
     func handle(_ type: CGEventType, _ event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             if !quitting, let tap { CGEvent.tapEnable(tap: tap, enable: true) }
-            if VoiceRecoveryGate.resumesIdleTap(armed: armed, active: router.active != nil,
-                                                keysHeld: wechatChordHeld || commandChordHeld, quitting: quitting) {
-                modeKeyLatch = ModeKeyLatch()
-                log("tap_resumed state=idle wait_ms=0")
-            } else {
-                // Gate routing until cleanup runs outside the time-limited tap.
-                armed = false
-                if !tapRecoveryPending {
-                    tapRecoveryPending = true
-                    DispatchQueue.main.async {
-                        self.recover(reason: .tapInterrupted)
-                        self.tapRecoveryPending = false
-                    }
-                }
-            }
+            // Voice boundaries no longer travel through this interceptable tap.
+            // A mode-key tap interruption must not abandon an active recording.
+            modeKeyLatch = ModeKeyLatch()
+            log("tap_resumed voice_transport=sayall_metadata")
             return Unmanaged.passUnretained(event)
         }
         let marker = event.getIntegerValueField(.eventSourceUserData)
-        guard marker == SayAllEventFilter.marker else { return Unmanaged.passUnretained(event) }
         let pid = pid_t(event.getIntegerValueField(.eventSourceUnixProcessID))
-        guard verifiesSayAllSource(pid) else { return Unmanaged.passUnretained(event) }
         let code = event.getIntegerValueField(.keyboardEventKeycode)
+        // Only remote voice metadata: never inspect ordinary keyboard payloads.
+        let remoteVoice = code == 55 && (marker == SayAllEventFilter.marker || pid == knownSayAllPID)
+        if remoteVoice {
+            log("voice_edge type=\(type.rawValue) flags=\(event.flags.rawValue) marker=\(marker) pid=\(pid) armed=\(armed) cleanup=\(tapRecoveryPending) active=\(router.active?.rawValue ?? "none")")
+        }
+        guard marker == SayAllEventFilter.marker else {
+            if remoteVoice { log("voice_rejected stage=marker") }
+            return Unmanaged.passUnretained(event)
+        }
+        guard verifiesSayAllSource(pid) else {
+            if remoteVoice { log("voice_rejected stage=source") }
+            return Unmanaged.passUnretained(event)
+        }
         if code == 55 {
-            // Once installed, a paused router consumes verified remote tails.
-            // A delayed release cannot begin another recording.
-            guard !tapRecoveryPending else { return nil }
-            let down = type == .keyDown || (type == .flagsChanged && event.flags.contains(.maskCommand))
-            if VoiceRecoveryGate.acceptsFreshPress(pending: startupPending, down: down,
-                                                   repeating: event.getIntegerValueField(.keyboardEventAutorepeat) != 0,
-                                                   quitting: quitting, cleaningUp: tapRecoveryPending) {
-                // A source-verified new gesture is an explicit start boundary;
-                // don't discard it while waiting for the previous stream's log.
-                startupPending = false
-                armed = true
-                log("enabled mode=\(router.mode.rawValue) source=fresh_voice_press wait_ms=0")
-            }
-            guard armed else { return nil }
-            if down, router.active == nil { knownSayAllPID = pid }
-            perform(router.hold(down: down))
+            // Neutralize the verified remote Command. It is not the voice source:
+            // other input tools can swallow its release before this tap sees it.
             return nil
         }
         let modeEffect = modeKeyLatch.handle(code: code, flags: event.flags.rawValue,
@@ -228,6 +222,24 @@ final class Switcher: NSObject, NSApplicationDelegate {
             return nil
         }
         return Unmanaged.passUnretained(event)
+    }
+
+    func handleVoiceEdge(_ edge: SayAllVoiceEdge) {
+        guard verifiesSayAllSource(edge.pid) else {
+            log("voice_metadata_rejected stage=source")
+            return
+        }
+        log("voice_boundary down=\(edge.down) active=\(router.active?.rawValue ?? "none")")
+        if VoiceRecoveryGate.acceptsFreshPress(pending: startupPending, down: edge.down,
+                                               repeating: false, quitting: quitting,
+                                               cleaningUp: tapRecoveryPending) {
+            startupPending = false
+            armed = true
+            log("enabled mode=\(router.mode.rawValue) source=fresh_voice_metadata")
+        }
+        guard armed, !quitting, !tapRecoveryPending else { return }
+        knownSayAllPID = edge.pid
+        perform(router.hold(down: edge.down))
     }
 
     func verifiesSayAllSource(_ pid: pid_t) -> Bool {
@@ -456,6 +468,7 @@ final class Switcher: NSObject, NSApplicationDelegate {
         return .terminateNow
     }
     func applicationWillTerminate(_ notification: Notification) {
+        voiceEdges?.stop()
         if router.active != nil { recover(reason: .exit) }
         releaseCommandChord()
         releaseWeChatChord()
